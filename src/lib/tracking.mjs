@@ -107,8 +107,21 @@ function isTrackingPointHeader(header) {
   return TRACKING_POINT_HEADER_PATTERN.test(normalized);
 }
 
+function calculateGapRiskScore(attainmentGap) {
+  if (attainmentGap === null || attainmentGap < ATTAINMENT_GAP_ALERT) {
+    return 0;
+  }
+
+  if (attainmentGap >= ATTAINMENT_GAP_HIGH) {
+    return 3;
+  }
+
+  return 2;
+}
+
 function resolveAttainmentStatus(statusSignals, attainment, expected) {
-  // Prioritize concern states first when multiple signals are present.
+  // Prioritize concern states first to avoid masking risk if conflicting signals are present.
+  // "Off track" wins over "On track", and "On track" wins over "Exceeding expectations".
   if (statusSignals.includes("Off track")) {
     return "Off track";
   }
@@ -229,12 +242,7 @@ function mapRecords(rawRecords, source) {
 function scoreRecord(record) {
   const flags = [];
   let riskScore = 0;
-  const gapRiskScore =
-    record.attainmentGap !== null && record.attainmentGap >= ATTAINMENT_GAP_ALERT
-      ? record.attainmentGap >= ATTAINMENT_GAP_HIGH
-        ? 3
-        : 2
-      : 0;
+  const gapRiskScore = calculateGapRiskScore(record.attainmentGap);
   const attainmentRiskScore =
     record.attainmentStatus === "Off track" ? ATTAINMENT_STATUS_RISK_HIGH : gapRiskScore;
 
