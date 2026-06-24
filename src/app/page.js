@@ -43,6 +43,10 @@ export default function Home() {
     setStatus(message);
   };
 
+  const handleLoadDemo = () => {
+    importRecords(parseCsvText(DEMO_DATA_CSV, "Demo dataset"), "Reloaded the demo tracking dataset.");
+  };
+
   const handleCsvImport = () => {
     try {
       const nextRecords = parseCsvText(csvText, "Manual CSV");
@@ -113,7 +117,7 @@ export default function Home() {
           </p>
         </div>
         <div className={styles.heroActions}>
-          <button type="button" className={styles.primaryButton} onClick={() => importRecords(parseCsvText(DEMO_DATA_CSV, "Demo dataset"), "Reloaded the demo tracking dataset.")}>
+          <button type="button" className={styles.primaryButton} onClick={handleLoadDemo}>
             Load demo dataset
           </button>
           <button
