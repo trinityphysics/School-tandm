@@ -6,6 +6,7 @@ import styles from "./page.module.css";
 import {
   DEMO_DATA_CSV,
   analyzeRecords,
+  createManualRecord,
   parseCsvText,
   parseWorksheetRows,
 } from "../lib/tracking.mjs";
@@ -13,7 +14,9 @@ import {
 const summaryCardOrder = [
   ["Learners tracked", "totalLearners"],
   ["Priority concerns", "flaggedLearners"],
-  ["Average attainment", "averageAttainment"],
+  ["Off track", "offTrackLearners"],
+  ["On track", "onTrackLearners"],
+  ["Exceeding expectations", "exceedingLearners"],
   ["Average gap", "averageGap"],
   ["Average attendance", "averageAttendance"],
 ];
@@ -23,7 +26,13 @@ function formatValue(key, value) {
     return "—";
   }
 
-  if (key === "totalLearners" || key === "flaggedLearners") {
+  if (
+    key === "totalLearners" ||
+    key === "flaggedLearners" ||
+    key === "offTrackLearners" ||
+    key === "onTrackLearners" ||
+    key === "exceedingLearners"
+  ) {
     return String(value);
   }
 
@@ -35,6 +44,13 @@ export default function Home() {
   const [csvText, setCsvText] = useState("");
   const [sheetUrl, setSheetUrl] = useState("");
   const [status, setStatus] = useState("Loaded demo data so the dashboard is ready to explore.");
+  const [manualFirstName, setManualFirstName] = useState("");
+  const [manualSurname, setManualSurname] = useState("");
+  const [manualClass, setManualClass] = useState("");
+  const [manualSection, setManualSection] = useState("");
+  const [manualCohort, setManualCohort] = useState("");
+  const [manualTrackingStatus, setManualTrackingStatus] = useState("On track");
+  const [manualAttendance, setManualAttendance] = useState("");
 
   const analytics = useMemo(() => analyzeRecords(records), [records]);
 
@@ -104,6 +120,31 @@ export default function Home() {
     }
   };
 
+  const handleManualEntry = () => {
+    try {
+      const nextRecord = createManualRecord({
+        First: manualFirstName,
+        Surname: manualSurname,
+        Class: manualClass,
+        "Practical Section": manualSection,
+        Cohort: manualCohort,
+        "T1 Reports": manualTrackingStatus,
+        Attendance: manualAttendance,
+      });
+      const nextRecords = [...records, nextRecord];
+      importRecords(nextRecords, `Added ${nextRecord.name} from manual input.`);
+      setManualFirstName("");
+      setManualSurname("");
+      setManualClass("");
+      setManualSection("");
+      setManualCohort("");
+      setManualTrackingStatus("On track");
+      setManualAttendance("");
+    } catch (error) {
+      setStatus(error.message);
+    }
+  };
+
   return (
     <main className={styles.page}>
       <section className={styles.hero}>
@@ -137,18 +178,83 @@ export default function Home() {
         <article className={styles.panel}>
           <h2>Import learner evidence</h2>
           <p className={styles.panelIntro}>
-            Use published Google Sheets CSV links or upload CSV / Excel exports from SEEMiS,
-            parent portals and local spreadsheets.
+            Manual entry is the primary workflow for continuous S1-S3 tracking; uploads remain an
+            additional way to convert existing exports into the shared template.
           </p>
 
           <div className={styles.importStack}>
+            <label className={styles.fieldLabel}>
+              First name
+              <input
+                className={styles.input}
+                value={manualFirstName}
+                onChange={(event) => setManualFirstName(event.target.value)}
+              />
+            </label>
+            <label className={styles.fieldLabel}>
+              Surname
+              <input
+                className={styles.input}
+                value={manualSurname}
+                onChange={(event) => setManualSurname(event.target.value)}
+              />
+            </label>
+            <label className={styles.fieldLabel}>
+              Class (S1-S3)
+              <input
+                className={styles.input}
+                value={manualClass}
+                onChange={(event) => setManualClass(event.target.value)}
+                placeholder="S1 / S2 / S3"
+              />
+            </label>
+            <label className={styles.fieldLabel}>
+              Practical section / subject
+              <input
+                className={styles.input}
+                value={manualSection}
+                onChange={(event) => setManualSection(event.target.value)}
+              />
+            </label>
+            <label className={styles.fieldLabel}>
+              Cohort
+              <input
+                className={styles.input}
+                value={manualCohort}
+                onChange={(event) => setManualCohort(event.target.value)}
+              />
+            </label>
+            <label className={styles.fieldLabel}>
+              Tracking status
+              <select
+                className={styles.input}
+                value={manualTrackingStatus}
+                onChange={(event) => setManualTrackingStatus(event.target.value)}
+              >
+                <option>Off track</option>
+                <option>On track</option>
+                <option>Exceeding expectations</option>
+              </select>
+            </label>
+            <label className={styles.fieldLabel}>
+              Attendance %
+              <input
+                className={styles.input}
+                value={manualAttendance}
+                onChange={(event) => setManualAttendance(event.target.value)}
+              />
+            </label>
+            <button type="button" className={styles.primaryButton} onClick={handleManualEntry}>
+              Add manual pupil entry
+            </button>
+
             <label className={styles.fieldLabel}>
               Paste CSV
               <textarea
                 className={styles.textarea}
                 value={csvText}
                 onChange={(event) => setCsvText(event.target.value)}
-                placeholder="Name,Stage,Attainment,Expected,Attendance,Wellbeing"
+                placeholder="First,Surname,Class,Practical Section,TG,Cohort,Homework Ratio,T1 Reports"
               />
             </label>
             <button type="button" className={styles.secondaryButton} onClick={handleCsvImport}>
@@ -173,7 +279,7 @@ export default function Home() {
             </button>
 
             <label className={styles.uploadLabel}>
-              Upload CSV / XLSX export
+              Additional upload (CSV / XLSX export)
               <input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} />
             </label>
           </div>
@@ -181,10 +287,10 @@ export default function Home() {
           <div className={styles.hintList}>
             <h3>Suggested columns</h3>
             <ul>
-              <li>Name, Stage, Teacher, Significant Aspect</li>
-              <li>Attainment, Expected, Attendance, Wellbeing</li>
-              <li>Literacy, Numeracy, Breadth, Challenge, Application</li>
-              <li>Support, Notes / Evidence</li>
+              <li>First, Surname, Class, Practical Section, TG, Cohort, Homework Ratio</li>
+              <li>Tracking points through the year: T1 Reports, T2 Reports, T3 Reports</li>
+              <li>Attainment status values: Off track, On track, Exceeding expectations</li>
+              <li>Use the same learner profile from S1 to S3 across all subjects</li>
             </ul>
           </div>
         </article>
@@ -265,6 +371,7 @@ export default function Home() {
                     <th>Group</th>
                     <th>Learners</th>
                     <th>Concern rate</th>
+                    <th>Off-track rate</th>
                     <th>Avg gap</th>
                     <th>Attendance</th>
                   </tr>
@@ -275,6 +382,7 @@ export default function Home() {
                       <td>{group.name}</td>
                       <td>{group.count}</td>
                       <td>{group.concernRate.toFixed(1)}%</td>
+                      <td>{group.offTrackRate.toFixed(1)}%</td>
                       <td>{group.averageGap === null ? "—" : `${group.averageGap.toFixed(1)}%`}</td>
                       <td>
                         {group.averageAttendance === null
@@ -317,7 +425,7 @@ export default function Home() {
                   <tr>
                     <th>Name</th>
                     <th>Stage</th>
-                    <th>Attainment</th>
+                    <th>Attainment status</th>
                     <th>Gap</th>
                     <th>Attendance</th>
                     <th>Source</th>
@@ -328,7 +436,7 @@ export default function Home() {
                     <tr key={record.id}>
                       <td>{record.name}</td>
                       <td>{record.stage || "—"}</td>
-                      <td>{record.attainment === null ? "—" : `${record.attainment}%`}</td>
+                      <td>{record.attainmentStatus || "—"}</td>
                       <td>
                         {record.attainmentGap === null
                           ? "—"

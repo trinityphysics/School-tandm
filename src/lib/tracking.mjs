@@ -1,8 +1,15 @@
 import Papa from "papaparse";
 
 const HEADER_ALIASES = {
+  firstName: ["first", "first name", "forename", "given name"],
+  surname: ["surname", "last name", "family name"],
   name: ["name", "learner", "student", "student name", "pupil", "young person"],
   stage: ["stage", "year", "year group", "class", "cohort"],
+  className: ["class", "registration class"],
+  practicalSection: ["practical section", "subject", "course", "department"],
+  tg: ["tg", "teacher group", "tracking group", "tutor group"],
+  cohort: ["cohort"],
+  homeworkRatio: ["homework ratio", "homework completion", "homework"],
   teacher: ["teacher", "class teacher", "staff", "mentor", "subject teacher"],
   significantAspect: [
     "significant aspect",
@@ -24,7 +31,8 @@ const HEADER_ALIASES = {
 };
 
 const THEME_GUIDANCE = {
-  "Attainment gap": "Use moderation and targeted planning to review progress against expected attainment.",
+  "Attainment concern":
+    "Review tracking points and moderation evidence to agree timely support and next steps.",
   "Attendance concern": "Discuss attendance barriers early and align support with pastoral or family partners.",
   "Wellbeing concern": "Review wellbeing evidence alongside a trusted adult and agree proportionate support.",
   "Literacy concern": "Plan literacy interventions and check whether challenge and application are secure.",
@@ -65,6 +73,42 @@ function parseNumber(value) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function parseAttainmentStatus(value) {
+  const normalized = normalizeHeader(value);
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (
+    normalized.includes("off track") ||
+    normalized.includes("below expectation") ||
+    normalized.includes("below expected")
+  ) {
+    return "Off track";
+  }
+
+  if (
+    normalized.includes("exceeding expectation") ||
+    normalized.includes("exceeding expectations") ||
+    normalized.includes("above expectation") ||
+    normalized.includes("above expected")
+  ) {
+    return "Exceeding expectations";
+  }
+
+  if (
+    normalized.includes("on track") ||
+    normalized.includes("meeting expectation") ||
+    normalized.includes("at expectation") ||
+    normalized.includes("at expected")
+  ) {
+    return "On track";
+  }
+
+  return null;
+}
+
 function inferFieldMap(headers) {
   const normalizedHeaders = headers.map((header) => ({
     original: header,
@@ -92,16 +136,46 @@ function buildRecord(rawRecord, source, index, fieldMap) {
 
   const attainment = numberValue("attainment");
   const expected = numberValue("expected");
+  const explicitAttainmentStatus = parseAttainmentStatus(textValue("attainment"));
+  const trackingPointStatuses = Object.entries(rawRecord)
+    .filter(([header]) => /(^t\d+)|(report)/i.test(normalizeHeader(header)))
+    .map(([, value]) => parseAttainmentStatus(value))
+    .filter(Boolean);
+  const statusSignals = [explicitAttainmentStatus, ...trackingPointStatuses];
+  const attainmentStatus = statusSignals.includes("Off track")
+    ? "Off track"
+    : statusSignals.includes("On track")
+      ? "On track"
+      : statusSignals.includes("Exceeding expectations")
+        ? "Exceeding expectations"
+        : attainment !== null && expected !== null
+          ? attainment < expected
+            ? "Off track"
+            : attainment >= expected + 5
+              ? "Exceeding expectations"
+              : "On track"
+          : null;
+  const firstName = textValue("firstName");
+  const surname = textValue("surname");
+  const fullName = `${firstName} ${surname}`.trim();
 
   return {
-    id: `${source}-${index}-${textValue("name") || "learner"}`,
+    id: `${source}-${index}-${textValue("name") || fullName || "learner"}`,
     source,
-    name: textValue("name"),
-    stage: textValue("stage"),
+    name: textValue("name") || fullName,
+    firstName,
+    surname,
+    stage: textValue("stage") || textValue("className"),
+    className: textValue("className"),
+    practicalSection: textValue("practicalSection"),
+    tg: textValue("tg"),
+    cohort: textValue("cohort"),
+    homeworkRatio: numberValue("homeworkRatio"),
     teacher: textValue("teacher"),
     significantAspect: textValue("significantAspect"),
     support: textValue("support"),
     notes: textValue("notes"),
+    attainmentStatus,
     attainment,
     expected,
     attainmentGap:
@@ -114,6 +188,10 @@ function buildRecord(rawRecord, source, index, fieldMap) {
     challenge: numberValue("challenge"),
     application: numberValue("application"),
   };
+}
+
+export function createManualRecord(input, source = "Manual input") {
+  return mapRecords([input], source)[0];
 }
 
 function mapRecords(rawRecords, source) {
@@ -137,8 +215,11 @@ function scoreRecord(record) {
   const flags = [];
   let riskScore = 0;
 
-  if (record.attainmentGap !== null && record.attainmentGap >= ATTAINMENT_GAP_ALERT) {
-    flags.push("Attainment gap");
+  if (record.attainmentStatus === "Off track") {
+    flags.push("Attainment concern");
+    riskScore += 3;
+  } else if (record.attainmentGap !== null && record.attainmentGap >= ATTAINMENT_GAP_ALERT) {
+    flags.push("Attainment concern");
     riskScore += record.attainmentGap >= ATTAINMENT_GAP_HIGH ? 3 : 2;
   }
 
@@ -269,10 +350,18 @@ export function analyzeRecords(records) {
       const key = record.stage || "Unstaged";
       const group =
         accumulator[key] ||
-        (accumulator[key] = { name: key, count: 0, flagged: 0, gaps: [], attendance: [] });
+        (accumulator[key] = {
+          name: key,
+          count: 0,
+          flagged: 0,
+          offTrack: 0,
+          gaps: [],
+          attendance: [],
+        });
 
       group.count += 1;
       group.flagged += record.flags.length ? 1 : 0;
+      group.offTrack += record.attainmentStatus === "Off track" ? 1 : 0;
       group.gaps.push(record.attainmentGap);
       group.attendance.push(record.attendance);
       return accumulator;
@@ -282,6 +371,7 @@ export function analyzeRecords(records) {
       name: group.name,
       count: group.count,
       concernRate: (group.flagged / group.count) * 100,
+      offTrackRate: (group.offTrack / group.count) * 100,
       averageGap: average(group.gaps),
       averageAttendance: average(group.attendance),
     }))
@@ -308,7 +398,11 @@ export function analyzeRecords(records) {
     summary: {
       totalLearners: scoredRecords.length,
       flaggedLearners: flaggedRecords.length,
-      averageAttainment: average(scoredRecords.map((record) => record.attainment)),
+      offTrackLearners: scoredRecords.filter((record) => record.attainmentStatus === "Off track").length,
+      onTrackLearners: scoredRecords.filter((record) => record.attainmentStatus === "On track").length,
+      exceedingLearners: scoredRecords.filter(
+        (record) => record.attainmentStatus === "Exceeding expectations",
+      ).length,
       averageGap: average(scoredRecords.map((record) => record.attainmentGap)),
       averageAttendance: average(scoredRecords.map((record) => record.attendance)),
     },
