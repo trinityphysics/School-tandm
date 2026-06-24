@@ -227,13 +227,17 @@ function mapRecords(rawRecords, source) {
 function scoreRecord(record) {
   const flags = [];
   let riskScore = 0;
+  const gapRiskScore =
+    record.attainmentGap !== null && record.attainmentGap >= ATTAINMENT_GAP_ALERT
+      ? record.attainmentGap >= ATTAINMENT_GAP_HIGH
+        ? 3
+        : 2
+      : 0;
+  const attainmentRiskScore = record.attainmentStatus === "Off track" ? 3 : gapRiskScore;
 
-  if (record.attainmentStatus === "Off track") {
+  if (attainmentRiskScore > 0) {
     flags.push("Attainment concern");
-    riskScore += 3;
-  } else if (record.attainmentGap !== null && record.attainmentGap >= ATTAINMENT_GAP_ALERT) {
-    flags.push("Attainment concern");
-    riskScore += record.attainmentGap >= ATTAINMENT_GAP_HIGH ? 3 : 2;
+    riskScore += attainmentRiskScore;
   }
 
   if (record.attendance !== null && record.attendance < ATTENDANCE_ALERT) {
@@ -353,16 +357,16 @@ export function analyzeRecords(records) {
   const statusCounts = scoredRecords.reduce(
     (accumulator, record) => {
       if (record.attainmentStatus === "Off track") {
-        accumulator.offTrack += 1;
+        accumulator.offTrackLearners += 1;
       } else if (record.attainmentStatus === "On track") {
-        accumulator.onTrack += 1;
+        accumulator.onTrackLearners += 1;
       } else if (record.attainmentStatus === "Exceeding expectations") {
-        accumulator.exceeding += 1;
+        accumulator.exceedingLearners += 1;
       }
 
       return accumulator;
     },
-    { offTrack: 0, onTrack: 0, exceeding: 0 },
+    { offTrackLearners: 0, onTrackLearners: 0, exceedingLearners: 0 },
   );
   const flaggedRecords = scoredRecords
     .filter((record) => record.flags.length)
@@ -425,9 +429,9 @@ export function analyzeRecords(records) {
     summary: {
       totalLearners: scoredRecords.length,
       flaggedLearners: flaggedRecords.length,
-      offTrackLearners: statusCounts.offTrack,
-      onTrackLearners: statusCounts.onTrack,
-      exceedingLearners: statusCounts.exceeding,
+      offTrackLearners: statusCounts.offTrackLearners,
+      onTrackLearners: statusCounts.onTrackLearners,
+      exceedingLearners: statusCounts.exceedingLearners,
       averageGap: average(scoredRecords.map((record) => record.attainmentGap)),
       averageAttendance: average(scoredRecords.map((record) => record.attendance)),
     },
