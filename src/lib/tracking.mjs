@@ -42,6 +42,7 @@ const THEME_GUIDANCE = {
 
 const ATTAINMENT_GAP_ALERT = 5;
 const ATTAINMENT_GAP_HIGH = 10;
+const EXCEEDING_THRESHOLD = 5;
 const ATTENDANCE_ALERT = 90;
 const SCORE_ALERT = 60;
 const TRACKING_POINT_HEADER_PATTERN = /^t\d+\s*(report|reports|tracking|track)?$/;
@@ -126,7 +127,7 @@ function resolveAttainmentStatus(statusSignals, attainment, expected) {
     return "Off track";
   }
 
-  if (attainment >= expected + 5) {
+  if (attainment >= expected + EXCEEDING_THRESHOLD) {
     return "Exceeding expectations";
   }
 
@@ -160,12 +161,12 @@ function buildRecord(rawRecord, source, index, fieldMap) {
 
   const attainment = numberValue("attainment");
   const expected = numberValue("expected");
-  const explicitAttainmentStatus = parseAttainmentStatus(textValue("attainment"));
+  const attainmentFieldStatus = parseAttainmentStatus(textValue("attainment"));
   const trackingPointStatusValues = Object.entries(rawRecord)
     .filter(([header]) => isTrackingPointHeader(header))
     .map(([, value]) => parseAttainmentStatus(value))
     .filter(Boolean);
-  const statusIndicators = [explicitAttainmentStatus, ...trackingPointStatusValues];
+  const statusIndicators = [attainmentFieldStatus, ...trackingPointStatusValues];
   const attainmentStatus = resolveAttainmentStatus(statusIndicators, attainment, expected);
   const firstName = textValue("firstName");
   const surname = textValue("surname");
