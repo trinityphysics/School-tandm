@@ -21,7 +21,7 @@ function formatValue(key, value) {
   return `${value.toFixed(1)}%`;
 }
 
-function asNumber(value) {
+function toNullableNumber(value) {
   return value === "" ? null : Number(value);
 }
 
@@ -179,10 +179,10 @@ export default function Home() {
         assessmentType: teacherSelection.assessmentType,
         pupilId: row.pupilId,
         expectedVersion: row.result?.version,
-        score: asNumber(row.draft.score),
-        expected: asNumber(row.draft.expected),
-        attendance: asNumber(row.draft.attendance),
-        wellbeing: asNumber(row.draft.wellbeing),
+        score: toNullableNumber(row.draft.score),
+        expected: toNullableNumber(row.draft.expected),
+        attendance: toNullableNumber(row.draft.attendance),
+        wellbeing: toNullableNumber(row.draft.wellbeing),
         evidenceNotes: row.draft.evidenceNotes,
       }),
     });
