@@ -44,7 +44,7 @@ const ATTAINMENT_GAP_ALERT = 5;
 const ATTAINMENT_GAP_HIGH = 10;
 const ATTENDANCE_ALERT = 90;
 const SCORE_ALERT = 60;
-const TRACKING_POINT_PATTERN = /^t\d+\s*(report|reports|tracking|track)?$/;
+const TRACKING_POINT_HEADER_PATTERN = /^t\d+\s*(report|reports|tracking|track)?$/;
 const STATUS_PATTERNS = {
   "Off track": ["off track", "below expectation", "below expected"],
   "On track": ["on track", "meeting expectation", "at expectation", "at expected"],
@@ -102,7 +102,7 @@ function parseAttainmentStatus(value) {
 
 function isTrackingPointHeader(header) {
   const normalized = normalizeHeader(header);
-  return TRACKING_POINT_PATTERN.test(normalized);
+  return TRACKING_POINT_HEADER_PATTERN.test(normalized);
 }
 
 function resolveAttainmentStatus(statusSignals, attainment, expected) {
@@ -161,15 +161,15 @@ function buildRecord(rawRecord, source, index, fieldMap) {
   const attainment = numberValue("attainment");
   const expected = numberValue("expected");
   const explicitAttainmentStatus = parseAttainmentStatus(textValue("attainment"));
-  const trackingPointStatuses = Object.entries(rawRecord)
+  const trackingPointStatusValues = Object.entries(rawRecord)
     .filter(([header]) => isTrackingPointHeader(header))
     .map(([, value]) => parseAttainmentStatus(value))
     .filter(Boolean);
-  const statusSignals = [explicitAttainmentStatus, ...trackingPointStatuses];
-  const attainmentStatus = resolveAttainmentStatus(statusSignals, attainment, expected);
+  const statusIndicators = [explicitAttainmentStatus, ...trackingPointStatusValues];
+  const attainmentStatus = resolveAttainmentStatus(statusIndicators, attainment, expected);
   const firstName = textValue("firstName");
   const surname = textValue("surname");
-  const fullName = `${firstName} ${surname}`.trim();
+  const fullName = [firstName, surname].filter(Boolean).join(" ");
 
   return {
     id: `${source}-${index}-${textValue("name") || fullName || "learner"}`,
@@ -203,13 +203,7 @@ function buildRecord(rawRecord, source, index, fieldMap) {
 }
 
 export function createManualRecord(input, source = "Manual input") {
-  const records = mapRecords([input], source);
-
-  if (!records.length) {
-    throw new Error("Manual entry requires a full name or both first name and surname.");
-  }
-
-  return records[0];
+  return mapRecords([input], source)[0];
 }
 
 function mapRecords(rawRecords, source) {
