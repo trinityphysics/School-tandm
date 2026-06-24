@@ -76,7 +76,7 @@ test("result upsert enforces optimistic concurrency", () => {
       expectedVersion: row.result.version,
       score: 71,
     });
-  }, /changed since you loaded it/);
+  }, /This record has changed since you loaded it\. Refresh and try again\./);
 });
 
 test("leadership analysis returns summary metrics", () => {
