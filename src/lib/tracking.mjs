@@ -297,7 +297,7 @@ export function analyzeRecords(records) {
         count,
         guidance:
           THEME_GUIDANCE[label] ||
-          "Use the summary signal to prompt professional dialogue and agree the next intervention.",
+          "Use the summary signal to prompt professional dialogue and agree on the next intervention.",
       })) || [];
 
   return {
