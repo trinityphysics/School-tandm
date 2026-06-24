@@ -13,6 +13,13 @@ export async function POST(request) {
       );
     }
 
+    if (!/^[A-Za-z0-9-_]+$/.test(reference.sheetId) || !/^\d+$/.test(reference.gid)) {
+      return NextResponse.json(
+        { error: "The Google Sheets URL contains an invalid sheet reference." },
+        { status: 400 },
+      );
+    }
+
     const exportUrl = new URL(
       `/spreadsheets/d/${reference.sheetId}/export`,
       "https://docs.google.com",
