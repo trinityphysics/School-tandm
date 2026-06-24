@@ -201,7 +201,7 @@ export default function Home() {
       <section className={styles.hero}>
         <div>
           <span className={styles.eyebrow}>School tracking and monitoring</span>
-          <h1>Centralised pupil outcomes with teacher input and leadership analytics.</h1>
+          <h1>Centralized pupil outcomes with teacher input and leadership analytics.</h1>
           <p>
             Teachers enter assessment outcomes against class and year selections. Middle and senior
             leaders filter the same central tracker for attainment, progress and intervention views.
