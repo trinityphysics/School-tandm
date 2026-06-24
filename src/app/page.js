@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import readXlsxFile from "read-excel-file";
+import readXlsxFile from "read-excel-file/browser";
 import styles from "./page.module.css";
 import {
   DEMO_DATA_CSV,
