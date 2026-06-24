@@ -35,7 +35,7 @@ Pupil B,S2,82,82,96,78`),
 test("sanitizeGoogleSheetUrl only allows Google Sheets links", () => {
   assert.equal(
     sanitizeGoogleSheetUrl("https://docs.google.com/spreadsheets/d/abc123/edit#gid=456"),
-    "https://docs.google.com/spreadsheets/d/abc123/export?format=csv&gid=0",
+    "https://docs.google.com/spreadsheets/d/abc123/export?format=csv&gid=456",
   );
   assert.equal(sanitizeGoogleSheetUrl("https://example.com/data.csv"), null);
 });

@@ -1,17 +1,24 @@
 import { NextResponse } from "next/server";
-import { parseCsvText, sanitizeGoogleSheetUrl } from "../../../lib/tracking.mjs";
+import { parseCsvText, parseGoogleSheetReference } from "../../../lib/tracking.mjs";
 
 export async function POST(request) {
   try {
     const { url } = await request.json();
-    const exportUrl = sanitizeGoogleSheetUrl(url);
+    const reference = parseGoogleSheetReference(url);
 
-    if (!exportUrl) {
+    if (!reference) {
       return NextResponse.json(
         { error: "Enter a valid Google Sheets URL that can be exported as CSV." },
         { status: 400 },
       );
     }
+
+    const exportUrl = new URL(
+      `/spreadsheets/d/${reference.sheetId}/export`,
+      "https://docs.google.com",
+    );
+    exportUrl.searchParams.set("format", "csv");
+    exportUrl.searchParams.set("gid", reference.gid);
 
     const response = await fetch(exportUrl, { cache: "no-store" });
 

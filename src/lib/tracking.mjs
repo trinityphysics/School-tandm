@@ -213,7 +213,7 @@ export function parseWorksheetRows(rows, source = "Workbook import") {
   return mapRecords(rawRecords, source);
 }
 
-export function sanitizeGoogleSheetUrl(value) {
+export function parseGoogleSheetReference(value) {
   try {
     const url = new URL(value);
 
@@ -227,11 +227,26 @@ export function sanitizeGoogleSheetUrl(value) {
       return null;
     }
 
-    const gid = url.searchParams.get("gid") || "0";
-    return `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv&gid=${gid}`;
+    const hashGid = url.hash.match(/gid=(\d+)/)?.[1];
+    const gid = url.searchParams.get("gid") || hashGid || "0";
+
+    return {
+      sheetId: match[1],
+      gid,
+    };
   } catch {
     return null;
   }
+}
+
+export function sanitizeGoogleSheetUrl(value) {
+  const reference = parseGoogleSheetReference(value);
+
+  if (!reference) {
+    return null;
+  }
+
+  return `https://docs.google.com/spreadsheets/d/${reference.sheetId}/export?format=csv&gid=${reference.gid}`;
 }
 
 export function analyzeRecords(records) {
