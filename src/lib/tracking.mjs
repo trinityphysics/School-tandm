@@ -32,6 +32,11 @@ const THEME_GUIDANCE = {
   "Learning entitlement concern": "Check breadth, challenge and application evidence rather than isolated completion data.",
 };
 
+const ATTAINMENT_GAP_ALERT = 5;
+const ATTAINMENT_GAP_HIGH = 10;
+const ATTENDANCE_ALERT = 90;
+const SCORE_ALERT = 60;
+
 export const DEMO_DATA_CSV = `Name,Stage,Teacher,Significant Aspect,Attainment,Expected,Attendance,Wellbeing,Literacy,Numeracy,Breadth,Challenge,Application,Support,Notes
 Aoife MacLeod,S1,Ms Grant,Reading comprehension,72,78,96,74,70,76,68,64,62,Monitor,Improving after supported reading tasks
 Ben Fraser,S1,Ms Grant,Number processes,51,68,87,58,55,48,52,45,41,Yes,Attendance dip affecting progress
@@ -132,27 +137,27 @@ function scoreRecord(record) {
   const flags = [];
   let riskScore = 0;
 
-  if (record.attainmentGap !== null && record.attainmentGap >= 5) {
+  if (record.attainmentGap !== null && record.attainmentGap >= ATTAINMENT_GAP_ALERT) {
     flags.push("Attainment gap");
-    riskScore += record.attainmentGap >= 10 ? 3 : 2;
+    riskScore += record.attainmentGap >= ATTAINMENT_GAP_HIGH ? 3 : 2;
   }
 
-  if (record.attendance !== null && record.attendance < 90) {
+  if (record.attendance !== null && record.attendance < ATTENDANCE_ALERT) {
     flags.push("Attendance concern");
     riskScore += 2;
   }
 
-  if (record.wellbeing !== null && record.wellbeing < 60) {
+  if (record.wellbeing !== null && record.wellbeing < SCORE_ALERT) {
     flags.push("Wellbeing concern");
     riskScore += 2;
   }
 
-  if (record.literacy !== null && record.literacy < 60) {
+  if (record.literacy !== null && record.literacy < SCORE_ALERT) {
     flags.push("Literacy concern");
     riskScore += 1;
   }
 
-  if (record.numeracy !== null && record.numeracy < 60) {
+  if (record.numeracy !== null && record.numeracy < SCORE_ALERT) {
     flags.push("Numeracy concern");
     riskScore += 1;
   }
@@ -161,7 +166,7 @@ function scoreRecord(record) {
     (value) => value !== null,
   );
 
-  if (entitlementIndicators.some((value) => value < 60)) {
+  if (entitlementIndicators.some((value) => value < SCORE_ALERT)) {
     flags.push("Learning entitlement concern");
     riskScore += 1;
   }
@@ -289,16 +294,15 @@ export function analyzeRecords(records) {
     return accumulator;
   }, {});
 
-  const priorityThemes =
-    Object.entries(themeCounts)
-      .sort((left, right) => right[1] - left[1])
-      .map(([label, count]) => ({
-        label,
-        count,
-        guidance:
-          THEME_GUIDANCE[label] ||
-          "Use the summary signal to prompt professional dialogue and agree on the next intervention.",
-      })) || [];
+  const priorityThemes = Object.entries(themeCounts)
+    .sort((left, right) => right[1] - left[1])
+    .map(([label, count]) => ({
+      label,
+      count,
+      guidance:
+        THEME_GUIDANCE[label] ||
+        "Use the summary signal to prompt professional dialogue and agree on the next intervention.",
+    }));
 
   return {
     summary: {
