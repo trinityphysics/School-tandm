@@ -43,6 +43,7 @@ const THEME_GUIDANCE = {
 const ATTAINMENT_GAP_ALERT = 5;
 const ATTAINMENT_GAP_HIGH = 10;
 const EXCEEDING_THRESHOLD = 5;
+const ATTAINMENT_STATUS_RISK_HIGH = 3;
 const ATTENDANCE_ALERT = 90;
 const SCORE_ALERT = 60;
 const TRACKING_POINT_HEADER_PATTERN = /^t\d+\s*(report|reports|tracking|track)?$/;
@@ -107,6 +108,7 @@ function isTrackingPointHeader(header) {
 }
 
 function resolveAttainmentStatus(statusSignals, attainment, expected) {
+  // Prioritize concern states first when multiple signals are present.
   if (statusSignals.includes("Off track")) {
     return "Off track";
   }
@@ -233,7 +235,8 @@ function scoreRecord(record) {
         ? 3
         : 2
       : 0;
-  const attainmentRiskScore = record.attainmentStatus === "Off track" ? 3 : gapRiskScore;
+  const attainmentRiskScore =
+    record.attainmentStatus === "Off track" ? ATTAINMENT_STATUS_RISK_HIGH : gapRiskScore;
 
   if (attainmentRiskScore > 0) {
     flags.push("Attainment concern");
