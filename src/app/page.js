@@ -41,6 +41,7 @@ export default function Home() {
     assessmentType: "Baseline",
   });
   const [teacherRows, setTeacherRows] = useState([]);
+  const [teacherRefreshTick, setTeacherRefreshTick] = useState(0);
   const [analysisFilters, setAnalysisFilters] = useState({
     academicYear: "",
     teacherId: "",
@@ -142,7 +143,7 @@ export default function Home() {
         setStatus(`Loaded ${payload.rows.length} pupil records for teacher input.`);
       })
       .catch(() => setStatus("Unable to load teacher records."));
-  }, [teacherSelection]);
+  }, [teacherSelection, teacherRefreshTick]);
 
   useEffect(() => {
     const params = new URLSearchParams(
@@ -193,7 +194,7 @@ export default function Home() {
     }
 
     setStatus(`Saved ${row.pupilName}'s result to the central tracker.`);
-    setTeacherSelection((current) => ({ ...current }));
+    setTeacherRefreshTick((current) => current + 1);
   };
 
   return (
