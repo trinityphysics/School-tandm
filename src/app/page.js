@@ -20,6 +20,8 @@ const summaryCardOrder = [
   ["Average gap", "averageGap"],
   ["Average attendance", "averageAttendance"],
 ];
+const templateCsvPlaceholder =
+  "First,Surname,Class,Practical Section,TG,Cohort,Homework Ratio,T1 Reports\nMia,Stewart,S2,Science,TG2,Blue,95%,Off track";
 
 function formatValue(key, value) {
   if (value === null || value === undefined) {
@@ -178,8 +180,9 @@ export default function Home() {
         <article className={styles.panel}>
           <h2>Import learner evidence</h2>
           <p className={styles.panelIntro}>
-            Manual entry is the primary workflow for continuous S1-S3 tracking; uploads remain an
-            additional way to convert existing exports into the shared template.
+            Manual entry is the primary workflow for continuous S1-S3 (Broad General Education
+            years) tracking; uploads remain an additional way to convert existing exports into the
+            shared template.
           </p>
 
           <div className={styles.importStack}>
@@ -245,7 +248,7 @@ export default function Home() {
               />
             </label>
             <button type="button" className={styles.primaryButton} onClick={handleManualEntry}>
-              Add manual pupil entry
+              Add learner
             </button>
 
             <label className={styles.fieldLabel}>
@@ -254,7 +257,7 @@ export default function Home() {
                 className={styles.textarea}
                 value={csvText}
                 onChange={(event) => setCsvText(event.target.value)}
-                placeholder="First,Surname,Class,Practical Section,TG,Cohort,Homework Ratio,T1 Reports"
+                placeholder={templateCsvPlaceholder}
               />
             </label>
             <button type="button" className={styles.secondaryButton} onClick={handleCsvImport}>

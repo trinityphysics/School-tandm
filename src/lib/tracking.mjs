@@ -44,6 +44,17 @@ const ATTAINMENT_GAP_ALERT = 5;
 const ATTAINMENT_GAP_HIGH = 10;
 const ATTENDANCE_ALERT = 90;
 const SCORE_ALERT = 60;
+const TRACKING_POINT_PATTERN = /^t\d+\s*(report|reports|tracking|track)?$/;
+const STATUS_PATTERNS = {
+  "Off track": ["off track", "below expectation", "below expected"],
+  "On track": ["on track", "meeting expectation", "at expectation", "at expected"],
+  "Exceeding expectations": [
+    "exceeding expectation",
+    "exceeding expectations",
+    "above expectation",
+    "above expected",
+  ],
+};
 
 export const DEMO_DATA_CSV = `Name,Stage,Teacher,Significant Aspect,Attainment,Expected,Attendance,Wellbeing,Literacy,Numeracy,Breadth,Challenge,Application,Support,Notes
 Aoife MacLeod,S1,Ms Grant,Reading comprehension,72,78,96,74,70,76,68,64,62,Monitor,Improving after supported reading tasks
@@ -80,33 +91,46 @@ function parseAttainmentStatus(value) {
     return null;
   }
 
-  if (
-    normalized.includes("off track") ||
-    normalized.includes("below expectation") ||
-    normalized.includes("below expected")
-  ) {
-    return "Off track";
-  }
-
-  if (
-    normalized.includes("exceeding expectation") ||
-    normalized.includes("exceeding expectations") ||
-    normalized.includes("above expectation") ||
-    normalized.includes("above expected")
-  ) {
-    return "Exceeding expectations";
-  }
-
-  if (
-    normalized.includes("on track") ||
-    normalized.includes("meeting expectation") ||
-    normalized.includes("at expectation") ||
-    normalized.includes("at expected")
-  ) {
-    return "On track";
+  for (const [status, patterns] of Object.entries(STATUS_PATTERNS)) {
+    if (patterns.some((pattern) => normalized.includes(pattern))) {
+      return status;
+    }
   }
 
   return null;
+}
+
+function isTrackingPointHeader(header) {
+  const normalized = normalizeHeader(header);
+  return TRACKING_POINT_PATTERN.test(normalized);
+}
+
+function resolveAttainmentStatus(statusSignals, attainment, expected) {
+  if (statusSignals.includes("Off track")) {
+    return "Off track";
+  }
+
+  if (statusSignals.includes("On track")) {
+    return "On track";
+  }
+
+  if (statusSignals.includes("Exceeding expectations")) {
+    return "Exceeding expectations";
+  }
+
+  if (attainment === null || expected === null) {
+    return null;
+  }
+
+  if (attainment < expected) {
+    return "Off track";
+  }
+
+  if (attainment >= expected + 5) {
+    return "Exceeding expectations";
+  }
+
+  return "On track";
 }
 
 function inferFieldMap(headers) {
@@ -138,23 +162,11 @@ function buildRecord(rawRecord, source, index, fieldMap) {
   const expected = numberValue("expected");
   const explicitAttainmentStatus = parseAttainmentStatus(textValue("attainment"));
   const trackingPointStatuses = Object.entries(rawRecord)
-    .filter(([header]) => /(^t\d+)|(report)/i.test(normalizeHeader(header)))
+    .filter(([header]) => isTrackingPointHeader(header))
     .map(([, value]) => parseAttainmentStatus(value))
     .filter(Boolean);
   const statusSignals = [explicitAttainmentStatus, ...trackingPointStatuses];
-  const attainmentStatus = statusSignals.includes("Off track")
-    ? "Off track"
-    : statusSignals.includes("On track")
-      ? "On track"
-      : statusSignals.includes("Exceeding expectations")
-        ? "Exceeding expectations"
-        : attainment !== null && expected !== null
-          ? attainment < expected
-            ? "Off track"
-            : attainment >= expected + 5
-              ? "Exceeding expectations"
-              : "On track"
-          : null;
+  const attainmentStatus = resolveAttainmentStatus(statusSignals, attainment, expected);
   const firstName = textValue("firstName");
   const surname = textValue("surname");
   const fullName = `${firstName} ${surname}`.trim();
@@ -191,7 +203,13 @@ function buildRecord(rawRecord, source, index, fieldMap) {
 }
 
 export function createManualRecord(input, source = "Manual input") {
-  return mapRecords([input], source)[0];
+  const records = mapRecords([input], source);
+
+  if (!records.length) {
+    throw new Error("Manual entry requires a full name or both first name and surname.");
+  }
+
+  return records[0];
 }
 
 function mapRecords(rawRecords, source) {
@@ -337,6 +355,20 @@ export function sanitizeGoogleSheetUrl(value) {
 
 export function analyzeRecords(records) {
   const scoredRecords = records.map(scoreRecord);
+  const statusCounts = scoredRecords.reduce(
+    (accumulator, record) => {
+      if (record.attainmentStatus === "Off track") {
+        accumulator.offTrack += 1;
+      } else if (record.attainmentStatus === "On track") {
+        accumulator.onTrack += 1;
+      } else if (record.attainmentStatus === "Exceeding expectations") {
+        accumulator.exceeding += 1;
+      }
+
+      return accumulator;
+    },
+    { offTrack: 0, onTrack: 0, exceeding: 0 },
+  );
   const flaggedRecords = scoredRecords
     .filter((record) => record.flags.length)
     .sort(
@@ -398,11 +430,9 @@ export function analyzeRecords(records) {
     summary: {
       totalLearners: scoredRecords.length,
       flaggedLearners: flaggedRecords.length,
-      offTrackLearners: scoredRecords.filter((record) => record.attainmentStatus === "Off track").length,
-      onTrackLearners: scoredRecords.filter((record) => record.attainmentStatus === "On track").length,
-      exceedingLearners: scoredRecords.filter(
-        (record) => record.attainmentStatus === "Exceeding expectations",
-      ).length,
+      offTrackLearners: statusCounts.offTrack,
+      onTrackLearners: statusCounts.onTrack,
+      exceedingLearners: statusCounts.exceeding,
       averageGap: average(scoredRecords.map((record) => record.attainmentGap)),
       averageAttendance: average(scoredRecords.map((record) => record.attendance)),
     },

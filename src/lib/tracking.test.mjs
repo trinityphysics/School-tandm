@@ -40,6 +40,7 @@ Pupil B,S2,82,82,96,78`),
   assert.equal(analytics.summary.flaggedLearners, 1);
   assert.equal(analytics.summary.offTrackLearners, 1);
   assert.equal(analytics.flaggedLearners[0].name, "Pupil A");
+  assert.equal(analytics.flaggedLearners[0].attainmentStatus, "Off track");
   assert.ok(analytics.flaggedLearners[0].flags.includes("Attainment concern"));
   assert.ok(analytics.flaggedLearners[0].flags.includes("Attendance concern"));
 });
