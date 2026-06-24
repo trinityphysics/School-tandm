@@ -99,7 +99,7 @@ function buildRecord(rawRecord, source, index, fieldMap) {
     notes: textValue("notes"),
     attainment,
     expected,
-    gap:
+    attainmentGap:
       attainment !== null && expected !== null ? Number((expected - attainment).toFixed(1)) : null,
     attendance: numberValue("attendance"),
     wellbeing: numberValue("wellbeing"),
@@ -132,9 +132,9 @@ function scoreRecord(record) {
   const flags = [];
   let riskScore = 0;
 
-  if (record.gap !== null && record.gap >= 5) {
+  if (record.attainmentGap !== null && record.attainmentGap >= 5) {
     flags.push("Attainment gap");
-    riskScore += record.gap >= 10 ? 3 : 2;
+    riskScore += record.attainmentGap >= 10 ? 3 : 2;
   }
 
   if (record.attendance !== null && record.attendance < 90) {
@@ -253,7 +253,11 @@ export function analyzeRecords(records) {
   const scoredRecords = records.map(scoreRecord);
   const flaggedRecords = scoredRecords
     .filter((record) => record.flags.length)
-    .sort((left, right) => right.riskScore - left.riskScore || (right.gap ?? 0) - (left.gap ?? 0));
+    .sort(
+      (left, right) =>
+        right.riskScore - left.riskScore ||
+        (right.attainmentGap ?? 0) - (left.attainmentGap ?? 0),
+    );
 
   const groups = Object.values(
     scoredRecords.reduce((accumulator, record) => {
@@ -264,7 +268,7 @@ export function analyzeRecords(records) {
 
       group.count += 1;
       group.flagged += record.flags.length ? 1 : 0;
-      group.gaps.push(record.gap);
+      group.gaps.push(record.attainmentGap);
       group.attendance.push(record.attendance);
       return accumulator;
     }, {}),
@@ -291,7 +295,9 @@ export function analyzeRecords(records) {
       .map(([label, count]) => ({
         label,
         count,
-        guidance: THEME_GUIDANCE[label],
+        guidance:
+          THEME_GUIDANCE[label] ||
+          "Use the summary signal to prompt professional dialogue and agree the next intervention.",
       })) || [];
 
   return {
@@ -299,7 +305,7 @@ export function analyzeRecords(records) {
       totalLearners: scoredRecords.length,
       flaggedLearners: flaggedRecords.length,
       averageAttainment: average(scoredRecords.map((record) => record.attainment)),
-      averageGap: average(scoredRecords.map((record) => record.gap)),
+      averageGap: average(scoredRecords.map((record) => record.attainmentGap)),
       averageAttendance: average(scoredRecords.map((record) => record.attendance)),
     },
     flaggedLearners: flaggedRecords.slice(0, 8),

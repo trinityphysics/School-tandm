@@ -325,7 +325,11 @@ export default function Home() {
                       <td>{record.name}</td>
                       <td>{record.stage || "—"}</td>
                       <td>{record.attainment === null ? "—" : `${record.attainment}%`}</td>
-                      <td>{record.gap === null ? "—" : `${record.gap.toFixed(1)}%`}</td>
+                      <td>
+                        {record.attainmentGap === null
+                          ? "—"
+                          : `${record.attainmentGap.toFixed(1)}%`}
+                      </td>
                       <td>{record.attendance === null ? "—" : `${record.attendance}%`}</td>
                       <td>{record.source}</td>
                     </tr>

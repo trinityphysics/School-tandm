@@ -13,7 +13,7 @@ Jamie,S1,62,75,88,59`);
 
   assert.equal(records[0].name, "Jamie");
   assert.equal(records[0].stage, "S1");
-  assert.equal(records[0].gap, 13);
+  assert.equal(records[0].attainmentGap, 13);
   assert.equal(records[0].attendance, 88);
   assert.equal(records[0].wellbeing, 59);
 });
